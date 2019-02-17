@@ -6,74 +6,140 @@ import tester.Tester;
 
 // The main class which represents the world state.
 class NBullets extends World {
-  int numBullets;
+  int bulletsLeft;
+  int shipsDestroyed;
   Random rand;
+  ILoBullet loBullets;
+  ILoShip loShips;
 
-  NBullets(int numBullets, Random rand) {
-    this.numBullets = numBullets;
+  NBullets(int bulletsLeft, int shipsDestroyed, Random rand, ILoBullet loBullets, ILoShip loShips) {
+    this.bulletsLeft = bulletsLeft;
+    this.shipsDestroyed = shipsDestroyed;
     this.rand = rand;
+    this.loBullets = loBullets;
+    this.loShips = loShips;
   }
 
-  NBullets(int numBullets) {
-    this(numBullets, new Random());
+  NBullets(int bulletsLeft) {
+    this(bulletsLeft, 0, new Random(), new MtLoBullet(), new MtLoShip());
   }
   // to get a random number between 0, 50: int random = (int)(Math.random() * 50 +
   // 1);
 
   public WorldScene makeScene() {
-    return getEmptyScene(); // why not new WorldScene(int width, int height)
+    WorldScene bullets = this.loBullets.drawBullets(new WorldScene(500, 300));
+    WorldScene ships = this.loShips.drawShips(bullets);
+    return ships.placeImageXY(writeText(), 10, 270);
+  }
+
+  public WorldImage writeText() {
+    return new TextImage(
+        "Bullets left: " + this.bulletsLeft + "; " + "Ships destroyed: " + this.shipsDestroyed,
+        Color.BLACK);
   }
 
   public boolean bigBang(int width, int height, double speed) { // speed represents tick rate.
     return true;
-  } // should we consider adding an lastScene?
+  }
+
+  public NBullets onKeyEvent(String key) {
+    if (key.equals("space")) { // make sure " " is actually the key for space.
+      return new NBullets(this.bulletsLeft, this.shipsDestroyed, this.rand,
+          new ConsLoBullet(new Bullet(2, new Posn(250, 300), 8, 0), this.loBullets), this.loShips);
+    }
+    else {
+      return this;
+    }
+  }
+
+  public WorldEnd worldEnds() { //Game ends when bulletsLeft == 0 && is MtLoBullet
+    if (this.bulletsLeft == 0) {
+      return new WorldEnd(true, this.makeFinalScene()); // write this method for end scene.
+    }
+    else {
+      return new WorldEnd(false, this.makeScene());
+    }
+  }
 }
 
-abstract class AGamePiece {
+class Ship {
   int radius; // Measured in pixels
   Posn coords;
   double velocity;
-  Color color;
+  Color color = Color.CYAN;
 
-  AGamePiece(int radius, Posn coords, double velocity, Color color) {
+  Ship(int radius, Posn coords, double velocity) {
     this.radius = radius;
     this.coords = coords;
-    this.velocity = velocity; // should we consider changing velocity to a Posn as opposed to a
-                              // double? Bullets don't fly only in one direction
-    this.color = color;
+    this.velocity = velocity;
   }
 
-  boolean pieceHit(AGamePiece that) {
+  boolean shipHit(Bullet that) {
     return (Math.hypot(this.coords.x - that.coords.x, this.coords.y - that.coords.y)) < (this.radius
         + that.radius);
   }
-}
 
-class Ship extends AGamePiece {
+  boolean isOffScreen() {
+    return this.coords.x < 0 || this.coords.x > 500 || this.coords.y < 0 || this.coords.y > 300;
+    // Hard-coded width and height; subject to change
+  }
 
-  Ship(Posn coords) {
-    super(10, coords, 4, Color.CYAN);
+  WorldScene drawOneShip(WorldScene ws) {
+    return ws.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, this.color),
+        this.coords.x, this.coords.y);
   }
 }
 
-class Bullet extends AGamePiece {
-  Bullet(int radius) {
-    super(radius, new Posn(150, 500), 8, Color.PINK); // Why is the position (150,500)? Shouldn't it
-                                                      // be (250, 300)
+class Bullet {
+  int radius; // Measured in pixels
+  Posn coords;
+  double velocity;
+  Color color = Color.PINK;
+  int numExplosions;
+
+  Bullet(int radius, Posn coords, double velocity, int numExplosions) {
+    this.radius = radius;
+    this.coords = coords;
+    this.velocity = velocity;
+    this.numExplosions = numExplosions;
   }
 
   // Moves a singular bullet by it's velocity
-  Bullet moveBullet() {
-    return new Bullet(radius, new Posn(this.coords.x, (this.coords.y - 8)), 8, Color.PINK);
-    // we have to return a new bullet with the new position. Not sure if we can do
-    // this with the current state of our constructor.
+  Bullet moveBullet(int ithBullet) {
+    return new Bullet(radius, this.coords, 8.0, numExplosions);
+  }
+
+  boolean isOffScreen() {
+    return this.coords.x < 0 || this.coords.x > 500 || this.coords.y < 0 || this.coords.y > 300;
+    // Hard-coded width and height; subject to change
+  }
+
+  WorldScene drawOneBullet(WorldScene ws) {
+    return ws.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, this.color),
+        this.coords.x, this.coords.y);
   }
 }
 
 interface ILoShip {
+  ILoShip removeShip(ILoBullet that);
+
+  ILoShip removeOffscreen();
+
+  WorldScene drawShips(WorldScene ws);
 }
 
 class MtLoShip implements ILoShip {
+  public ILoShip removeShip(ILoBullet that) {
+    return this;
+  }
+
+  public ILoShip removeOffscreen() {
+    return this;
+  }
+
+  public WorldScene drawShips(WorldScene ws) {
+    return ws;
+  }
 }
 
 class ConsLoShip implements ILoShip {
@@ -84,16 +150,56 @@ class ConsLoShip implements ILoShip {
     this.first = first;
     this.rest = rest;
   }
+
+  public ILoShip removeShip(ILoBullet that) {
+    if (that.shipRemove(this.first)) {
+      return this.rest.removeShip(that);
+    }
+    else {
+      return new ConsLoShip(this.first, this.rest.removeShip(that));
+    }
+  }
+
+  public ILoShip removeOffscreen() {
+    if (this.first.isOffScreen()) {
+      return this.rest.removeOffscreen();
+    }
+    else {
+      return new ConsLoShip(this.first, this.rest.removeOffscreen());
+    }
+  }
+
+  public WorldScene drawShips(WorldScene ws) {
+    return this.rest.drawShips(this.first.drawOneShip(ws));
+  }
 }
 
 interface ILoBullet {
   ILoBullet moveBullets();
+
+  boolean shipRemove(Ship ship);
+
+  ILoBullet removeOffScreen();
+
+  WorldScene drawBullets(WorldScene ws);
 }
 
 class MtLoBullet implements ILoBullet {
-  // returns an empty list of bullets bc there are no bullets to move.
+  // returns an empty list of bullets because there are no bullets to move.
   public ILoBullet moveBullets() {
     return this;
+  }
+
+  public boolean shipRemove(Ship ship) {
+    return false;
+  }
+
+  public ILoBullet removeOffScreen() {
+    return this;
+  }
+
+  public WorldScene drawBullets(WorldScene ws) {
+    return ws;
   }
 }
 
@@ -111,6 +217,22 @@ class ConsLoBullet implements ILoBullet {
     return new ConsLoBullet(this.first.moveBullet(), this.rest.moveBullets());
   }
 
+  public boolean shipRemove(Ship ship) {
+    return ship.shipHit(this.first) || this.rest.shipRemove(ship);
+  }
+
+  public ILoBullet removeOffScreen() {
+    if (this.first.isOffScreen()) {
+      return this.rest.removeOffScreen();
+    }
+    else {
+      return new ConsLoBullet(this.first, this.rest.removeOffScreen());
+    }
+  }
+
+  public WorldScene drawBullets(WorldScene ws) {
+    return this.rest.drawBullets(this.first.drawOneBullet(ws)); // Might be other way around
+  }
 }
 
 // Not sure how examples work with big bang
@@ -121,5 +243,6 @@ class ExamplesMyWorldProgram {
     int worldHeight = 800;
     double tickRate = 1;
     return w.bigBang(worldWidth, worldHeight, tickRate);
+
   }
 }
