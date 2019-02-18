@@ -10,10 +10,10 @@ class NBullets extends World {
   int shipsDestroyed;
   ILoBullet loBullets;
   ILoShip loShips;
+  int numTicks;
 
-  int numTicks = 0;
-
-  NBullets(int bulletsLeft, int shipsDestroyed, ILoBullet loBullets, ILoShip loShips) {
+  NBullets(int bulletsLeft, int shipsDestroyed, ILoBullet loBullets, ILoShip loShips,
+      int numTicks) {
     if (bulletsLeft < 0) {
       throw new IllegalArgumentException("Not a valid number of bullets");
       // TEST CONSTRUCTOREXCEPTION
@@ -24,10 +24,11 @@ class NBullets extends World {
     this.shipsDestroyed = shipsDestroyed;
     this.loBullets = loBullets;
     this.loShips = loShips;
+    this.numTicks = numTicks;
   }
 
   NBullets(int bulletsLeft) {
-    this(bulletsLeft, 0, new MtLoBullet(), new MtLoShip());
+    this(bulletsLeft, 0, new MtLoBullet(), new MtLoShip(), 0);
   }
   // to get a random number between 0, 50: int random = (int)(Math.random() * 50 +
   // 1);
@@ -46,8 +47,9 @@ class NBullets extends World {
 
   public NBullets onKeyEvent(String key) {
     if (key.equals(" ")) {
-      return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed, this.rand,
-          new ConsLoBullet(new Bullet(2, new Posn(250, 300), 8, 0), this.loBullets), this.loShips);
+      return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed,
+          new ConsLoBullet(new Bullet(2, new Posn(250, 300), new Posn(0, 8), 1), this.loBullets),
+          this.loShips, this.numTicks);
     }
     else {
       return this;
@@ -55,7 +57,7 @@ class NBullets extends World {
   }
 
   public WorldEnd worldEnds() { // Game ends when bulletsLeft == 0 && is MtLoBullet
-    if (this.bulletsLeft == 0 && this.loBullets.noneLeft()) {
+    if (this.bulletsLeft == 0 && this.loBullets.noneLeft()) { // Game is ending prematurely
       return new WorldEnd(true, this.makeScene());
     }
     else {
@@ -66,22 +68,26 @@ class NBullets extends World {
   public World onTick() {
     NBullets temp = new NBullets(this.bulletsLeft,
         this.loShips.countHits(this.shipsDestroyed, this.loBullets),
-        loBullets.removeOffScreen().moveBullets(), loShips.removeOffscreen().removeShip(loBullets))
-            .moveShips();
+        loBullets.removeOffScreen().removeBulletIfHit(loShips).moveBullets(),
+        loShips.removeOffscreen().removeShip(loBullets).moveShips(), this.numTicks);
 
     if (numTicks % 28 == 0) {
       numTicks++;
-      return (World) temp.loShips.spawnShips(loShips);
+
+      Random r = new Random();
+      int numToSpawn = r.nextInt(4);
+
+      return new NBullets(temp.bulletsLeft, temp.shipsDestroyed, temp.loBullets,
+          temp.loShips.spawnShips(numToSpawn), this.numTicks);
     }
     else {
       numTicks++;
-      return temp;
+      return new NBullets(temp.bulletsLeft, temp.shipsDestroyed, temp.loBullets, temp.loShips,
+          this.numTicks);
     }
 
     /*
      * To Do
-     * - Generate random ships
-     * - Move all the ships
      * - Move all the bullets, including explosions
      */
 
@@ -89,13 +95,12 @@ class NBullets extends World {
 }
 
 class Ship {
-  int radius; // Measured in pixels
+  int radius = 10; // Measured in pixels
   Posn coords;
-  double velocity;
+  double velocity; // Pixels per tick
   Color color = Color.CYAN;
 
-  Ship(int radius, Posn coords, double velocity) {
-    this.radius = radius;
+  Ship(Posn coords, double velocity) {
     this.coords = coords;
     this.velocity = velocity;
   }
@@ -114,16 +119,22 @@ class Ship {
     return ws.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, this.color),
         this.coords.x, this.coords.y);
   }
+
+  Ship moveShip() {
+    return new Ship(new Posn((int) (this.coords.x + this.velocity), this.coords.y), this.velocity); // May
+                                                                                                    // be
+                                                                                                    // unsmooth?
+  }
 }
 
 class Bullet {
   int radius; // Measured in pixels
   Posn coords;
-  double velocity;
+  Posn velocity;
   Color color = Color.PINK;
   int numExplosions;
 
-  Bullet(int radius, Posn coords, double velocity, int numExplosions) {
+  Bullet(int radius, Posn coords, Posn velocity, int numExplosions) {
     this.radius = radius;
     this.coords = coords;
     this.velocity = velocity;
@@ -132,7 +143,7 @@ class Bullet {
 
   // Moves a singular bullet by it's velocity
   Bullet moveBullet(int ithBullet) {
-    return new Bullet(radius, this.coords, 8.0, numExplosions);
+    return new Bullet(radius, this.coords, new Posn(0, 8), numExplosions);
   }
 
   boolean isOffScreen() {
@@ -143,6 +154,41 @@ class Bullet {
   WorldScene drawOneBullet(WorldScene ws) {
     return ws.placeImageXY(new CircleImage(this.radius, OutlineMode.SOLID, this.color),
         this.coords.x, this.coords.y);
+  }
+
+  Bullet moveBullet() {
+    return new Bullet(this.radius,
+        new Posn(this.coords.x - this.velocity.x, this.coords.y - this.velocity.y), this.velocity,
+        this.numExplosions);
+  }
+
+  ILoBullet explodeBullet() {
+    return this.explodeBulletHelper(this.numExplosions + 1);
+  }
+
+  ILoBullet explodeBulletHelper(int modExplosions) {
+    int degrees = modExplosions * (360 / (this.numExplosions + 1));
+
+    if (modExplosions < 1) {
+      return new MtLoBullet();
+    }
+
+    if (this.radius < 10) {
+      return new ConsLoBullet(
+          new Bullet(this.radius + 2, this.coords,
+              new Posn((int) (8 * Math.cos(Math.toRadians(degrees))),   // adding here
+                  (int) (8 * Math.sin(Math.toRadians(degrees)))),
+              this.numExplosions + 1),
+          this.explodeBulletHelper(modExplosions - 1));
+    }
+    else {
+      return new ConsLoBullet(
+          new Bullet(this.radius, this.coords,
+              new Posn((int) (8 * Math.cos(Math.toRadians(degrees))),
+                  (int) (8 * Math.sin(Math.toRadians(degrees)))),
+              this.numExplosions + 1),
+          this.explodeBulletHelper(modExplosions - 1));
+    }
   }
 }
 
@@ -155,7 +201,11 @@ interface ILoShip {
 
   int countHits(int destroyedSoFar, ILoBullet that);
 
-  ILoShip spawnShips(ILoShip shipsSoFar);
+  ILoShip spawnShips(int numToSpawn);
+
+  ILoShip moveShips();
+
+  boolean bulletHit(Bullet target);
 }
 
 class MtLoShip implements ILoShip {
@@ -175,31 +225,30 @@ class MtLoShip implements ILoShip {
     return destroyedSoFar;
   }
 
-  public ILoShip spawnShips(ILoShip shipsSoFar) {
-    Random r = new Random();
-    ILoShip toAdd = shipsSoFar;
-    int numSpawn = r.nextInt(3) + 1; // Random number between 1 and 3
-    int randNum;
-    int numLeft = 0;
-    int numRight = 0;
-
-    for (int i = 0; i < numSpawn; i++) {
-      randNum = r.nextInt(1);
-      if (randNum == 0) {
-        numLeft++;
+  public ILoShip spawnShips(int numToSpawn) {
+    if (numToSpawn == 0) {
+      return this;
+    }
+    else {
+      if (new Random().nextInt(2) == 0) { // Spawn from left
+        return new ConsLoShip(new Ship(
+            new Posn(0, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            this).spawnShips(--numToSpawn);
       }
       else {
-        numRight++;
+        return new ConsLoShip(new Ship(
+            new Posn(500, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4),
+            this).spawnShips(--numToSpawn);
       }
     }
-    
-    
-    return toAdd;
-    r = new Random();
-    if (r.nextInt(0) == 0) {
-      return
-    }
-    
+  }
+
+  public ILoShip moveShips() {
+    return this;
+  }
+
+  public boolean bulletHit(Bullet target) {
+    return false;
   }
 }
 
@@ -242,10 +291,38 @@ class ConsLoShip implements ILoShip {
       return this.rest.countHits(destroyedSoFar, that);
     }
   }
+
+  public ILoShip spawnShips(int numToSpawn) {
+    if (numToSpawn == 0) {
+      return this;
+    }
+    else {
+      if (new Random().nextInt(2) == 0) { // Spawn from left
+        return new ConsLoShip(new Ship(
+            new Posn(0, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            this).spawnShips(--numToSpawn);
+      }
+      else {
+        return new ConsLoShip(new Ship(
+            new Posn(500, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4),
+            this).spawnShips(--numToSpawn);
+      }
+    }
+  }
+
+  public ILoShip moveShips() {
+    return new ConsLoShip(this.first.moveShip(), this.rest.moveShips());
+  }
+
+  public boolean bulletHit(Bullet target) {
+    return this.first.shipHit(target) || this.rest.bulletHit(target);
+  }
 }
 
 interface ILoBullet {
   ILoBullet moveBullets();
+
+  ILoBullet removeBulletIfHit(ILoShip that);
 
   boolean shipRemove(Ship ship);
 
@@ -254,6 +331,8 @@ interface ILoBullet {
   WorldScene drawBullets(WorldScene ws);
 
   boolean noneLeft();
+
+  ILoBullet appendTo(ILoBullet other);
 }
 
 class MtLoBullet implements ILoBullet {
@@ -276,6 +355,15 @@ class MtLoBullet implements ILoBullet {
 
   public boolean noneLeft() {
     return true;
+  }
+
+  // Returns an empty list as because no bullets have hit any ships
+  public ILoBullet removeBulletIfHit(ILoShip that) {
+    return this;
+  }
+
+  public ILoBullet appendTo(ILoBullet other) {
+    return other;
   }
 }
 
@@ -313,6 +401,19 @@ class ConsLoBullet implements ILoBullet {
   public boolean noneLeft() {
     return true;
   }
+
+  public ILoBullet removeBulletIfHit(ILoShip that) {
+    if (that.bulletHit(this.first)) {
+      return this.first.explodeBullet().appendTo(this.rest.removeBulletIfHit(that));
+    }
+    else {
+      return new ConsLoBullet(this.first, this.rest.removeBulletIfHit(that));
+    }
+  }
+
+  public ILoBullet appendTo(ILoBullet other) {
+    return this.rest.appendTo(new ConsLoBullet(this.first, other));
+  }
 }
 
 class ExamplesNBullets {
@@ -320,7 +421,7 @@ class ExamplesNBullets {
     NBullets w = new NBullets(10);
     int worldWidth = 500;
     int worldHeight = 300;
-    double tickRate = 1;
+    double tickRate = 1.0 / 28.0;
     return w.bigBang(worldWidth, worldHeight, tickRate);
   }
 }
