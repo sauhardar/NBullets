@@ -8,20 +8,26 @@ import tester.Tester;
 class NBullets extends World {
   int bulletsLeft;
   int shipsDestroyed;
-  Random rand;
   ILoBullet loBullets;
   ILoShip loShips;
 
-  NBullets(int bulletsLeft, int shipsDestroyed, Random rand, ILoBullet loBullets, ILoShip loShips) {
-    this.bulletsLeft = bulletsLeft;
+  int numTicks = 0;
+
+  NBullets(int bulletsLeft, int shipsDestroyed, ILoBullet loBullets, ILoShip loShips) {
+    if (bulletsLeft < 0) {
+      throw new IllegalArgumentException("Not a valid number of bullets");
+      // TEST CONSTRUCTOREXCEPTION
+    }
+    else {
+      this.bulletsLeft = bulletsLeft;
+    }
     this.shipsDestroyed = shipsDestroyed;
-    this.rand = rand;
     this.loBullets = loBullets;
     this.loShips = loShips;
   }
 
   NBullets(int bulletsLeft) {
-    this(bulletsLeft, 0, new Random(), new MtLoBullet(), new MtLoShip());
+    this(bulletsLeft, 0, new MtLoBullet(), new MtLoShip());
   }
   // to get a random number between 0, 50: int random = (int)(Math.random() * 50 +
   // 1);
@@ -29,22 +35,18 @@ class NBullets extends World {
   public WorldScene makeScene() {
     WorldScene bullets = this.loBullets.drawBullets(new WorldScene(500, 300));
     WorldScene ships = this.loShips.drawShips(bullets);
-    return ships.placeImageXY(writeText(), 10, 270);
+    return ships.placeImageXY(writeText(), 110, 290);
   }
 
   public WorldImage writeText() {
     return new TextImage(
-        "Bullets left: " + this.bulletsLeft + "; " + "Ships destroyed: " + this.shipsDestroyed,
+        "Bullets left: " + this.bulletsLeft + "; " + "Ships destroyed: " + this.shipsDestroyed, 13,
         Color.BLACK);
   }
 
-  public boolean bigBang(int width, int height, double speed) { // speed represents tick rate.
-    return true;
-  }
-
   public NBullets onKeyEvent(String key) {
-    if (key.equals("space")) { // make sure " " is actually the key for space.
-      return new NBullets(this.bulletsLeft, this.shipsDestroyed, this.rand,
+    if (key.equals(" ")) {
+      return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed, this.rand,
           new ConsLoBullet(new Bullet(2, new Posn(250, 300), 8, 0), this.loBullets), this.loShips);
     }
     else {
@@ -52,13 +54,37 @@ class NBullets extends World {
     }
   }
 
-  public WorldEnd worldEnds() { //Game ends when bulletsLeft == 0 && is MtLoBullet
-    if (this.bulletsLeft == 0) {
-      return new WorldEnd(true, this.makeFinalScene()); // write this method for end scene.
+  public WorldEnd worldEnds() { // Game ends when bulletsLeft == 0 && is MtLoBullet
+    if (this.bulletsLeft == 0 && this.loBullets.noneLeft()) {
+      return new WorldEnd(true, this.makeScene());
     }
     else {
       return new WorldEnd(false, this.makeScene());
     }
+  }
+
+  public World onTick() {
+    NBullets temp = new NBullets(this.bulletsLeft,
+        this.loShips.countHits(this.shipsDestroyed, this.loBullets),
+        loBullets.removeOffScreen().moveBullets(), loShips.removeOffscreen().removeShip(loBullets))
+            .moveShips();
+
+    if (numTicks % 28 == 0) {
+      numTicks++;
+      return (World) temp.loShips.spawnShips(loShips);
+    }
+    else {
+      numTicks++;
+      return temp;
+    }
+
+    /*
+     * To Do
+     * - Generate random ships
+     * - Move all the ships
+     * - Move all the bullets, including explosions
+     */
+
   }
 }
 
@@ -126,6 +152,10 @@ interface ILoShip {
   ILoShip removeOffscreen();
 
   WorldScene drawShips(WorldScene ws);
+
+  int countHits(int destroyedSoFar, ILoBullet that);
+
+  ILoShip spawnShips(ILoShip shipsSoFar);
 }
 
 class MtLoShip implements ILoShip {
@@ -139,6 +169,37 @@ class MtLoShip implements ILoShip {
 
   public WorldScene drawShips(WorldScene ws) {
     return ws;
+  }
+
+  public int countHits(int destroyedSoFar, ILoBullet that) {
+    return destroyedSoFar;
+  }
+
+  public ILoShip spawnShips(ILoShip shipsSoFar) {
+    Random r = new Random();
+    ILoShip toAdd = shipsSoFar;
+    int numSpawn = r.nextInt(3) + 1; // Random number between 1 and 3
+    int randNum;
+    int numLeft = 0;
+    int numRight = 0;
+
+    for (int i = 0; i < numSpawn; i++) {
+      randNum = r.nextInt(1);
+      if (randNum == 0) {
+        numLeft++;
+      }
+      else {
+        numRight++;
+      }
+    }
+    
+    
+    return toAdd;
+    r = new Random();
+    if (r.nextInt(0) == 0) {
+      return
+    }
+    
   }
 }
 
@@ -172,6 +233,15 @@ class ConsLoShip implements ILoShip {
   public WorldScene drawShips(WorldScene ws) {
     return this.rest.drawShips(this.first.drawOneShip(ws));
   }
+
+  public int countHits(int destroyedSoFar, ILoBullet that) {
+    if (that.shipRemove(this.first)) {
+      return this.rest.countHits(destroyedSoFar + 1, that);
+    }
+    else {
+      return this.rest.countHits(destroyedSoFar, that);
+    }
+  }
 }
 
 interface ILoBullet {
@@ -182,6 +252,8 @@ interface ILoBullet {
   ILoBullet removeOffScreen();
 
   WorldScene drawBullets(WorldScene ws);
+
+  boolean noneLeft();
 }
 
 class MtLoBullet implements ILoBullet {
@@ -200,6 +272,10 @@ class MtLoBullet implements ILoBullet {
 
   public WorldScene drawBullets(WorldScene ws) {
     return ws;
+  }
+
+  public boolean noneLeft() {
+    return true;
   }
 }
 
@@ -233,16 +309,18 @@ class ConsLoBullet implements ILoBullet {
   public WorldScene drawBullets(WorldScene ws) {
     return this.rest.drawBullets(this.first.drawOneBullet(ws)); // Might be other way around
   }
+
+  public boolean noneLeft() {
+    return true;
+  }
 }
 
-// Not sure how examples work with big bang
-class ExamplesMyWorldProgram {
+class ExamplesNBullets {
   boolean testBigBang(Tester t) {
     NBullets w = new NBullets(10);
     int worldWidth = 500;
-    int worldHeight = 800;
+    int worldHeight = 300;
     double tickRate = 1;
     return w.bigBang(worldWidth, worldHeight, tickRate);
-
   }
 }
