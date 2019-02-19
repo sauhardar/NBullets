@@ -121,9 +121,7 @@ class Ship {
   }
 
   Ship moveShip() {
-    return new Ship(new Posn((int) (this.coords.x + this.velocity), this.coords.y), this.velocity); // May
-                                                                                                    // be
-                                                                                                    // unsmooth?
+    return new Ship(new Posn((int) (this.coords.x + this.velocity), this.coords.y), this.velocity);
   }
 }
 
