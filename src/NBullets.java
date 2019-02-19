@@ -70,10 +70,10 @@ class NBullets extends World {
   }
 
   // Shoots a new bullet from the bottom of the screen when space bar is pressed.
+  // if the user presses space while the last bullet is still on screen, 
+  // will throw an IllegalArgumentException
   public NBullets onKeyEvent(String key) {
-    if (key.equals(" ") && this.bulletsLeft != 0) { // if the user presses space while the last
-                                                    // bullet is still on screen, will throw an
-                                                    // IllegalArgumentException
+    if (key.equals(" ") && this.bulletsLeft != 0) {
       return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed, new ConsLoBullet(
           new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS, new Posn(0, NBullets.BSPEED), 1),
           this.loBullets), this.loShips, this.numTicks);
@@ -97,12 +97,11 @@ class NBullets extends World {
   // Updates the world by spawning ships at the given rate and incrementing the
   // ticks at each tick, removing ships and bullets that are off screen, removing
   // ships and bullets that have come in contact, and moving the game pieces.
+  // NOTE: method .removeBulletIfHit() has to come before moveBullets()
   public World onTick() {
     NBullets temp = new NBullets(this.bulletsLeft,
         this.loShips.countHits(this.shipsDestroyed, this.loBullets),
-        loBullets.removeOffScreen().removeBulletIfHit(loShips).moveBullets(), // .removeBulletIfHit()
-                                                                              // has to come before
-                                                                              // moveBullets()
+        loBullets.removeOffScreen().removeBulletIfHit(loShips).moveBullets(), 
         loShips.removeOffscreen().removeShip(loBullets).moveShips(), this.numTicks);
 
     if (numTicks % NBullets.SSPAWNRATE == 0) {
@@ -453,6 +452,7 @@ class ConsLoBullet implements ILoBullet {
 class ExamplesNBullets {
   ILoBullet exampleBulls = new MtLoBullet();
   ILoShip exampleShips = new MtLoShip();
+  
   boolean testNBullets(Tester t) {
     return t.checkConstructorException(new IllegalArgumentException("Not a valid number of "
         + "bullets"), "NBullets", -1, 10, exampleBulls, exampleShips, 10)
