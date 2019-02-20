@@ -631,35 +631,37 @@ class ConsLoBullet implements ILoBullet {
 }
 
 class ExamplesNBullets {
-  ILoBullet exampleBulls = new MtLoBullet();
-  ILoShip exampleShips = new MtLoShip();
+  ILoBullet emptyBulls = new MtLoBullet();
+  ILoShip emptyShips = new MtLoShip();
+  WorldScene ws = new WorldScene(500, 300);
 
-  boolean testNBullets(Tester t) {
-    return t.checkConstructorException(
-        new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -1, 10,
-        exampleBulls, exampleShips, 10)
-        && t.checkConstructorException(
-            new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -10,
-            230, exampleBulls, exampleShips, 430);
+  Bullet b1 = new Bullet(2, new Posn(50, 50), new Posn(0, 8), 0);
+  Bullet b2 = new Bullet(2, new Posn(50, 42), new Posn(0, 8), 0);
+  Bullet b3 = new Bullet(2, new Posn(100, 100), new Posn(-10, 10), 5);
+  Bullet b4 = new Bullet(2, new Posn(110, 90), new Posn(-10, 10), 5);
+  Bullet b5 = new Bullet(2, new Posn(1100, 90), new Posn(-10, 10), 5);
+  Bullet b6 = new Bullet(12, new Posn(1100, 90), new Posn(-10, 10), 5);
+
+  // Tests on Bullet class
+
+  boolean testIsOffScreen(Tester t) {
+    return t.checkExpect(b1.isOffScreen(), false) && t.checkExpect(b5.isOffScreen(), true);
   }
 
-  boolean testBulletMethods(Tester t) {
-    Bullet b1 = new Bullet(2, new Posn(50, 50), new Posn(0, 8), 0);
-    Bullet b2 = new Bullet(2, new Posn(50, 42), new Posn(0, 8), 0);
-    Bullet b3 = new Bullet(2, new Posn(100, 100), new Posn(-10, 10), 5);
-    Bullet b4 = new Bullet(2, new Posn(110, 90), new Posn(-10, 10), 5);
-    Bullet b5 = new Bullet(2, new Posn(1100, 90), new Posn(-10, 10), 5);
-    Bullet b6 = new Bullet(12, new Posn(1100, 90), new Posn(-10, 10), 5);
-    WorldScene ws = new WorldScene(500, 300);
-    return t.checkExpect(b1.isOffScreen(), false) && t.checkExpect(b5.isOffScreen(), true)
-        && t.checkExpect(b1.drawOneBullet(ws),
-            ws.placeImageXY(new CircleImage(b1.radius, OutlineMode.SOLID, Color.PINK), b1.coords.x,
-                b1.coords.y))
-        && t.checkExpect(b2.drawOneBullet(ws),
-            ws.placeImageXY(new CircleImage(b2.radius, OutlineMode.SOLID, Color.PINK), b2.coords.x,
-                b2.coords.y))
-        && t.checkExpect(b1.moveBullet(), b2) && t.checkExpect(b3.moveBullet(), b4)
-        && t.checkExpect(b1.explodeBullet(), b1.explodeBulletHelper(1))
+  boolean testDrawOneBullet(Tester t) {
+    return t.checkExpect(b1.drawOneBullet(ws),
+        ws.placeImageXY(new CircleImage(b1.radius, OutlineMode.SOLID, Color.PINK), b1.coords.x,
+            b1.coords.y))
+        && t.checkExpect(b2.drawOneBullet(ws), ws.placeImageXY(
+            new CircleImage(b2.radius, OutlineMode.SOLID, Color.PINK), b2.coords.x, b2.coords.y));
+  }
+
+  boolean testMoveBullet(Tester t) {
+    return t.checkExpect(b1.moveBullet(), b2) && t.checkExpect(b3.moveBullet(), b4);
+  }
+
+  boolean testExplodeBullet(Tester t) {
+    return t.checkExpect(b1.explodeBullet(), b1.explodeBulletHelper(1))
         && t.checkExpect(b5.explodeBullet(), b5.explodeBulletHelper(6))
         && t.checkExpect(b1
             .explodeBulletHelper(0), new MtLoBullet())
@@ -683,6 +685,17 @@ class ExamplesNBullets {
                             * Math.sin(Math.toRadians(5 * (360 / (b6.numExplosions + 1)))))),
                     6),
                 b6.explodeBulletHelper(4)));
+
+  }
+
+  // Tests for NBullets
+  boolean testConstructorException(Tester t) {
+    return t.checkConstructorException(
+        new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -1, 10,
+        emptyBulls, emptyShips, 10)
+        && t.checkConstructorException(
+            new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -10,
+            230, emptyBulls, emptyShips, 430);
   }
 
   boolean testBigBang(Tester t) {
