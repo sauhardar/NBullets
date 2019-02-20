@@ -554,6 +554,7 @@ class MtLoBullet implements ILoBullet {
   }
 }
 
+// Non-empty list of bullets
 class ConsLoBullet implements ILoBullet {
 
   /*
@@ -583,15 +584,17 @@ class ConsLoBullet implements ILoBullet {
     this.rest = rest;
   }
 
-  // moves all bullets in the list
+  // Moves all bullets in the list
   public ILoBullet moveBullets() {
     return new ConsLoBullet(this.first.moveBullet(), this.rest.moveBullets());
   }
 
+  // Determines if a ship has been hit by any of the list of bullets
   public boolean shipRemove(Ship ship) {
     return ship.shipHit(this.first) || this.rest.shipRemove(ship);
   }
 
+  // Removes all bullets that are not on screen
   public ILoBullet removeOffScreen() {
     if (this.first.isOffScreen()) {
       return this.rest.removeOffScreen();
@@ -601,14 +604,17 @@ class ConsLoBullet implements ILoBullet {
     }
   }
 
+  // Draws all the bullets in the list
   public WorldScene drawBullets(WorldScene ws) {
     return this.rest.drawBullets(this.first.drawOneBullet(ws)); // Might be other way around
   }
 
+  // Returns false because there are still bullets left
   public boolean noneLeft() {
     return false;
   }
 
+  // Creates a new list of bullets with the exploded bullet that hit
   public ILoBullet removeBulletIfHit(ILoShip that) {
     if (that.bulletHit(this.first)) {
       return this.first.explodeBullet().appendTo(this.rest.removeBulletIfHit(that));
@@ -618,6 +624,7 @@ class ConsLoBullet implements ILoBullet {
     }
   }
 
+  // Adds two lists together
   public ILoBullet appendTo(ILoBullet other) {
     return this.rest.appendTo(new ConsLoBullet(this.first, other));
   }
