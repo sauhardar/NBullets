@@ -322,7 +322,7 @@ interface ILoShip {
 // A list with no ships
 class MtLoShip implements ILoShip {
 
-   final static Random SHIP_RANDOM = new Random((long) 1);
+  final static Random SHIP_RANDOM = new Random((long) 1);
   /*
    * TEMPLATE FOR MTLOSHIP
    * FIELDS
@@ -368,17 +368,15 @@ class MtLoShip implements ILoShip {
     }
     else {
       if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
-        return new ConsLoShip(new Ship(
-            new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+        return new ConsLoShip(
+            new Ship(
+                new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
             this).spawnShips(--numToSpawn);
       }
       else {
-        return new ConsLoShip(
-            new Ship(
-                new Posn(NBullets.WIDTH,
-                    SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)),
-                -4),
-            this).spawnShips(--numToSpawn);
+        return new ConsLoShip(new Ship(new Posn(NBullets.WIDTH,
+            SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4), this)
+                .spawnShips(--numToSpawn);
       }
     }
   }
@@ -469,8 +467,9 @@ class ConsLoShip implements ILoShip {
     }
     else {
       if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
-        return new ConsLoShip(new Ship(
-            new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+        return new ConsLoShip(
+            new Ship(
+                new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
             this).spawnShips(--numToSpawn);
       }
       else {
@@ -738,15 +737,16 @@ class ExamplesNBullets {
         && t.checkExpect(this.test2.worldEnds(), new WorldEnd(false, this.test2.makeScene()));
   }
 
-//  boolean testOnTick(Tester t) {
-//    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
-//        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
-//        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
-//        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);
-//
-//    return t.checkOneOf(this.n5.onTick(), new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed,
-//        n5Temp.loBullets, n5Temp.loShips.spawnShips(2), this.n5.numTicks));
-//  }
+  boolean testOnTick(Tester t) {
+    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
+        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
+        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
+        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);
+
+    return t.checkExpect(this.n5.onTick(),
+        new NBullets(5, 0, new MtLoBullet(), new ConsLoShip(new Ship(new Posn(0, 111), 4),
+            new ConsLoShip(new Ship(new Posn(0, 111), 4), new MtLoShip())), 1));
+  }
 
   boolean testShipHit(Tester t) {
     return t.checkExpect(this.s1.shipHit(new Bullet(new Posn(0, 0))), true)
@@ -881,11 +881,11 @@ class ExamplesNBullets {
         && t.checkExpect(this.moreShips.bulletHit(this.b7), true);
   }
 
-  boolean testBigBang(Tester t) {
-    NBullets w = new NBullets(10);
-    int worldWidth = 500;
-    int worldHeight = 300;
-    double tickRate = 1.0 / 28.0;
-    return w.bigBang(worldWidth, worldHeight, tickRate);
-  }
+//  boolean testBigBang(Tester t) {
+//    NBullets w = new NBullets(10);
+//    int worldWidth = 500;
+//    int worldHeight = 300;
+//    double tickRate = 1.0 / 28.0;
+//    return w.bigBang(worldWidth, worldHeight, tickRate);
+//  }
 }
