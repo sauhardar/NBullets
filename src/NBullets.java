@@ -25,6 +25,8 @@ class NBullets extends World {
   static final int SHIPSIZE = 10; // Radius in pixels
   static Color SHIPCOLOR = Color.CYAN;
 
+  static final Random R = new Random((long) 1);
+
   /*
    * TEMPLATE FOR NBULLET
    * FIELDS
@@ -127,8 +129,7 @@ class NBullets extends World {
     if (numTicks % NBullets.SSPAWNRATE == 0) {
       numTicks++;
 
-      Random r = new Random((long) 1);
-      int numToSpawn = r.nextInt(4);
+      int numToSpawn = R.nextInt(4);
 
       return new NBullets(temp.bulletsLeft, temp.shipsDestroyed, temp.loBullets,
           temp.loShips.spawnShips(numToSpawn), this.numTicks);
@@ -296,8 +297,6 @@ class Bullet {
 
 // A list of ships
 interface ILoShip {
-  // TODO YOU DON'T NEED A TEMPLATE FOR AN INTERFACE RIGHT? yea don't think so
-
   // Removes a ship if it is hit
   ILoShip removeShip(ILoBullet that);
 
@@ -323,10 +322,11 @@ interface ILoShip {
 // A list with no ships
 class MtLoShip implements ILoShip {
 
+   final static Random SHIP_RANDOM = new Random((long) 1);
   /*
    * TEMPLATE FOR MTLOSHIP
    * FIELDS
-   * None
+   * this.SHIP_RANDOM - Random
    *
    * METHODS
    * this.removeShip(ILoBullet that) - ILoShip
@@ -338,7 +338,7 @@ class MtLoShip implements ILoShip {
    * this.bulletHit(Bullet target) - boolean
    *
    * METHODS ON FIELDS
-   * none
+   * this.SHIP_RANDOM.nextInt() - int
    */
 
   // Removes a ship if it is hit from the empty list
@@ -367,16 +367,16 @@ class MtLoShip implements ILoShip {
       return this;
     }
     else {
-      if (new Random((long) 1).nextInt(2) == 0) { // Spawn from left
+      if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
         return new ConsLoShip(new Ship(
-            new Posn(0, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
             this).spawnShips(--numToSpawn);
       }
       else {
         return new ConsLoShip(
             new Ship(
                 new Posn(NBullets.WIDTH,
-                    new Random((long) 1).nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)),
+                    SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)),
                 -4),
             this).spawnShips(--numToSpawn);
       }
@@ -401,6 +401,7 @@ class ConsLoShip implements ILoShip {
    * FIELDS
    * this.first - Ship
    * this.rest - ILoShip
+   * this.SHIP_RANDOM - Random
    *
    * METHODS
    * this.removeShip(ILoBullet that) - ILoShip
@@ -413,10 +414,13 @@ class ConsLoShip implements ILoShip {
    *
    * METHODS ON FIELDS
    * Methods of Ship (see template above)
+   * this.SHIP_RANDOM.nextInt() - int
    */
 
   Ship first;
   ILoShip rest;
+
+  final static Random SHIP_RANDOM = new Random((long) 1);
 
   ConsLoShip(Ship first, ILoShip rest) {
     this.first = first;
@@ -464,14 +468,14 @@ class ConsLoShip implements ILoShip {
       return this;
     }
     else {
-      if (new Random((long) 1).nextInt(2) == 0) { // Spawn from left
+      if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
         return new ConsLoShip(new Ship(
-            new Posn(0, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
             this).spawnShips(--numToSpawn);
       }
       else {
         return new ConsLoShip(new Ship(
-            new Posn(500, new Random().nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4),
+            new Posn(500, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4),
             this).spawnShips(--numToSpawn);
       }
     }
@@ -734,15 +738,15 @@ class ExamplesNBullets {
         && t.checkExpect(this.test2.worldEnds(), new WorldEnd(false, this.test2.makeScene()));
   }
 
-  boolean testOnTick(Tester t) {
-    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
-        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
-        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
-        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);
-
-    return t.checkOneOf(this.n5.onTick(), new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed,
-        n5Temp.loBullets, n5Temp.loShips.spawnShips(2), this.n5.numTicks));
-  }
+//  boolean testOnTick(Tester t) {
+//    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
+//        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
+//        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
+//        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);
+//
+//    return t.checkOneOf(this.n5.onTick(), new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed,
+//        n5Temp.loBullets, n5Temp.loShips.spawnShips(2), this.n5.numTicks));
+//  }
 
   boolean testShipHit(Tester t) {
     return t.checkExpect(this.s1.shipHit(new Bullet(new Posn(0, 0))), true)
@@ -855,9 +859,10 @@ class ExamplesNBullets {
         && t.checkExpect(this.someShips.countHits(10, this.someBulls), 11);
   }
 
-//  boolean testSpawnShips(Tester t) {
-//    return t.checkExpect(actual, expected);     not sure how to test randomness here.
-//  }
+  boolean testSpawnShips(Tester t) {
+    return t.checkExpect(emptyShips.spawnShips(2), new ConsLoShip(new Ship(new Posn(500, 200), -4),
+        new ConsLoShip(new Ship(new Posn(500, 200), -4), new MtLoShip())));
+  }
 
   boolean testMoveShips(Tester t) {
     return t.checkExpect(this.emptyShips.moveShips(), this.emptyShips)
@@ -876,11 +881,11 @@ class ExamplesNBullets {
         && t.checkExpect(this.moreShips.bulletHit(this.b7), true);
   }
 
-//  boolean testBigBang(Tester t) {
-//    NBullets w = new NBullets(10);
-//    int worldWidth = 500;
-//    int worldHeight = 300;
-//    double tickRate = 1.0 / 28.0;
-//    return w.bigBang(worldWidth, worldHeight, tickRate);
-//  }
+  boolean testBigBang(Tester t) {
+    NBullets w = new NBullets(10);
+    int worldWidth = 500;
+    int worldHeight = 300;
+    double tickRate = 1.0 / 28.0;
+    return w.bigBang(worldWidth, worldHeight, tickRate);
+  }
 }
