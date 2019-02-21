@@ -744,10 +744,11 @@ class ExamplesNBullets {
   int ph = rTick.nextInt();
 
   boolean testOnTick(Tester t) {
-    return t.checkExpect(this.zeroTest.onTick(), new NBullets(10, 0, emptyBulls, emptyShips, 2, new Random((long) 1)))
+    return t.checkExpect(this.zeroTest.onTick(),
+        new NBullets(10, 0, emptyBulls, emptyShips, 2, new Random((long) 1)))
         && t.checkExpect(this.tickTest.onTick(),
-        new NBullets(tickTest.bulletsLeft, tickTest.shipsDestroyed, emptyBulls,
-            tickTest.loShips.spawnShips(2, rTick), 29, tickTest.random));
+            new NBullets(tickTest.bulletsLeft, tickTest.shipsDestroyed, emptyBulls,
+                tickTest.loShips.spawnShips(2, rTick), 29, tickTest.random));
   }
 
   boolean testShipHit(Tester t) {
@@ -862,6 +863,7 @@ class ExamplesNBullets {
   }
 
   Random rSpawn = new Random((long) 1);
+
   boolean testSpawnShips(Tester t) {
 
     return t.checkExpect(emptyShips.spawnShips(2, this.n5.random),
@@ -910,11 +912,11 @@ class ExamplesNBullets {
             .drawBullets(((ConsLoBullet) this.someBulls).first.drawOneBullet(ws)));
   }
 
-//  boolean testBigBang(Tester t) {
-//    NBullets w = new NBullets(10);
-//    int worldWidth = 500;
-//    int worldHeight = 300;
-//    double tickRate = 1.0 / 28.0;
-//    return w.bigBang(worldWidth, worldHeight, tickRate);
-//  }
+  boolean testBigBang(Tester t) {
+    NBullets w = new NBullets(10);
+    int worldWidth = 500;
+    int worldHeight = 300;
+    double tickRate = 1.0 / 28.0;
+    return w.bigBang(worldWidth, worldHeight, tickRate);
+  }
 }
