@@ -25,8 +25,6 @@ class NBullets extends World {
   static final int SHIPSIZE = 10; // Radius in pixels
   static Color SHIPCOLOR = Color.CYAN;
 
-  static final Random R = new Random((long) 1);
-
   /*
    * TEMPLATE FOR NBULLET
    * FIELDS
@@ -35,6 +33,7 @@ class NBullets extends World {
    * this.loBullets - ILoBullet
    * this.loShips - ILoShip
    * this.numTicks - int
+   * this.rand - Random
    *
    * METHODS
    * this.makeScene() - WorldScene
@@ -53,10 +52,11 @@ class NBullets extends World {
   ILoBullet loBullets;
   ILoShip loShips;
   int numTicks;
+  Random random;
 
   // Main constructor:
-  NBullets(int bulletsLeft, int shipsDestroyed, ILoBullet loBullets, ILoShip loShips,
-      int numTicks) {
+  NBullets(int bulletsLeft, int shipsDestroyed, ILoBullet loBullets, ILoShip loShips, int numTicks,
+      Random random) {
     if (bulletsLeft < 0) {
       throw new IllegalArgumentException("Not a valid number of bullets");
     }
@@ -66,13 +66,14 @@ class NBullets extends World {
       this.loBullets = loBullets;
       this.loShips = loShips;
       this.numTicks = numTicks;
+      this.random = random;
     }
   }
 
   // Convenience constructor that only takes in the bullets left.
   // User initiates game with this constructor.
   NBullets(int bulletsLeft) {
-    this(bulletsLeft, 0, new MtLoBullet(), new MtLoShip(), 0);
+    this(bulletsLeft, 0, new MtLoBullet(), new MtLoShip(), 0, new Random((long) 1));
   }
 
   // Visualizes the world. Draws the text on top of the ships on top
@@ -96,9 +97,10 @@ class NBullets extends World {
   // will throw an IllegalArgumentException
   public NBullets onKeyEvent(String key) {
     if (key.equals(" ") && this.bulletsLeft != 0) {
-      return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed, new ConsLoBullet(
-          new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS, new Posn(0, NBullets.BSPEED), 1),
-          this.loBullets), this.loShips, this.numTicks);
+      return new NBullets(this.bulletsLeft - 1, this.shipsDestroyed,
+          new ConsLoBullet(new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS,
+              new Posn(0, NBullets.BSPEED), 1), this.loBullets),
+          this.loShips, this.numTicks, this.random);
     }
     else {
       return this;
@@ -124,20 +126,21 @@ class NBullets extends World {
     NBullets temp = new NBullets(this.bulletsLeft,
         this.loShips.countHits(this.shipsDestroyed, this.loBullets),
         this.loBullets.removeOffScreen().removeBulletIfHit(this.loShips).moveBullets(),
-        this.loShips.removeOffscreen().removeShip(this.loBullets).moveShips(), this.numTicks);
+        this.loShips.removeOffscreen().removeShip(this.loBullets).moveShips(), this.numTicks,
+        this.random);
 
     if (numTicks % NBullets.SSPAWNRATE == 0) {
       numTicks++;
 
-      int numToSpawn = R.nextInt(4);
+      int numToSpawn = this.random.nextInt(4);
 
       return new NBullets(temp.bulletsLeft, temp.shipsDestroyed, temp.loBullets,
-          temp.loShips.spawnShips(numToSpawn), this.numTicks);
+          temp.loShips.spawnShips(numToSpawn, this.random), this.numTicks, this.random);
     }
     else {
       numTicks++;
       return new NBullets(temp.bulletsLeft, temp.shipsDestroyed, temp.loBullets, temp.loShips,
-          this.numTicks);
+          this.numTicks, this.random);
     }
   }
 }
@@ -310,7 +313,7 @@ interface ILoShip {
   int countHits(int destroyedSoFar, ILoBullet that);
 
   // Spawns a random number of ships (between 0-3)
-  ILoShip spawnShips(int numToSpawn);
+  ILoShip spawnShips(int numToSpawn, Random random);
 
   // Moves all the ships that are on the screen
   ILoShip moveShips();
@@ -322,7 +325,6 @@ interface ILoShip {
 // A list with no ships
 class MtLoShip implements ILoShip {
 
-  final static Random SHIP_RANDOM = new Random((long) 1);
   /*
    * TEMPLATE FOR MTLOSHIP
    * FIELDS
@@ -362,21 +364,20 @@ class MtLoShip implements ILoShip {
   }
 
   // Spawns between 0-3 ships randomly in the middle 5/7 of the screen
-  public ILoShip spawnShips(int numToSpawn) {
+  public ILoShip spawnShips(int numToSpawn, Random random) {
     if (numToSpawn == 0) {
       return this;
     }
     else {
-      if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
+      if (random.nextInt(2) == 0) { // Spawn from left
         return new ConsLoShip(
-            new Ship(
-                new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
-            this).spawnShips(--numToSpawn);
+            new Ship(new Posn(0, random.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            this).spawnShips(--numToSpawn, random);
       }
       else {
-        return new ConsLoShip(new Ship(new Posn(NBullets.WIDTH,
-            SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4), this)
-                .spawnShips(--numToSpawn);
+        return new ConsLoShip(new Ship(
+            new Posn(NBullets.WIDTH, random.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)),
+            -4), this).spawnShips(--numToSpawn, random);
       }
     }
   }
@@ -417,8 +418,6 @@ class ConsLoShip implements ILoShip {
 
   Ship first;
   ILoShip rest;
-
-  final static Random SHIP_RANDOM = new Random((long) 1);
 
   ConsLoShip(Ship first, ILoShip rest) {
     this.first = first;
@@ -461,21 +460,20 @@ class ConsLoShip implements ILoShip {
   }
 
   // Spawns between 0-3 ships randomly from both sides
-  public ILoShip spawnShips(int numToSpawn) {
+  public ILoShip spawnShips(int numToSpawn, Random random) {
     if (numToSpawn == 0) {
       return this;
     }
     else {
-      if (SHIP_RANDOM.nextInt(2) == 0) { // Spawn from left
+      if (random.nextInt(2) == 0) { // Spawn from left
         return new ConsLoShip(
-            new Ship(
-                new Posn(0, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
-            this).spawnShips(--numToSpawn);
+            new Ship(new Posn(0, random.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), 4),
+            this).spawnShips(--numToSpawn, random);
       }
       else {
         return new ConsLoShip(new Ship(
-            new Posn(500, SHIP_RANDOM.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4),
-            this).spawnShips(--numToSpawn);
+            new Posn(500, random.nextInt((int) (5 / 7.0 * 300)) + (int) (1 / 7.0 * 300)), -4), this)
+                .spawnShips(--numToSpawn, random);
       }
     }
   }
@@ -665,10 +663,9 @@ class ExamplesNBullets {
   ILoBullet someBulls = new ConsLoBullet(this.b1,
       new ConsLoBullet(this.b2, new ConsLoBullet(this.b3,
           new ConsLoBullet(this.b4, new ConsLoBullet(this.b7, new MtLoBullet())))));
-  ILoBullet moreBulls = new ConsLoBullet(this.b3, new ConsLoBullet(this.b4, 
+  ILoBullet moreBulls = new ConsLoBullet(this.b3, new ConsLoBullet(this.b4,
       new ConsLoBullet(this.b5, new ConsLoBullet(this.b6, new MtLoBullet()))));
-  ILoBullet moreBulls1 = new ConsLoBullet(this.b3, 
-      new ConsLoBullet(this.b4, new MtLoBullet()));
+  ILoBullet moreBulls1 = new ConsLoBullet(this.b3, new ConsLoBullet(this.b4, new MtLoBullet()));
 
   ILoShip emptyShips = new MtLoShip();
   ILoShip someShips = new ConsLoShip(this.s1,
@@ -683,16 +680,16 @@ class ExamplesNBullets {
   WorldScene ws = new WorldScene(500, 300);
 
   NBullets n5 = new NBullets(5);
-  NBullets test2 = new NBullets(10, 5, this.someBulls, this.someShips, 30);
+  NBullets test2 = new NBullets(10, 5, this.someBulls, this.someShips, 30, new Random((long) 1));
 
   // Tests for NBullets
   boolean testConstructorException(Tester t) {
     return t.checkConstructorException(
         new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -1, 10,
-        emptyBulls, emptyShips, 10)
+        emptyBulls, emptyShips, 10, new Random())
         && t.checkConstructorException(
             new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -10,
-            230, emptyBulls, emptyShips, 430);
+            230, emptyBulls, emptyShips, 430, new Random());
   }
 
   boolean testMakeScene(Tester t) {
@@ -724,13 +721,13 @@ class ExamplesNBullets {
         new NBullets(this.n5.bulletsLeft - 1, this.n5.shipsDestroyed,
             new ConsLoBullet(new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS,
                 new Posn(0, NBullets.BSPEED), 1), this.n5.loBullets),
-            this.n5.loShips, this.n5.numTicks))
+            this.n5.loShips, this.n5.numTicks, this.n5.random))
         && t.checkExpect(this.n5.onKeyEvent("a"), this.n5)
         && t.checkExpect(this.test2.onKeyEvent(" "),
             new NBullets(this.test2.bulletsLeft - 1, this.test2.shipsDestroyed,
                 new ConsLoBullet(new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS,
                     new Posn(0, NBullets.BSPEED), 1), this.test2.loBullets),
-                this.test2.loShips, this.test2.numTicks))
+                this.test2.loShips, this.test2.numTicks, this.test2.random))
         && t.checkExpect(this.test2.onKeyEvent("a"), this.test2);
   }
 
@@ -741,16 +738,19 @@ class ExamplesNBullets {
         && t.checkExpect(this.test2.worldEnds(), new WorldEnd(false, this.test2.makeScene()));
   }
 
-//  boolean testOnTick(Tester t) {
-//    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
-//        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
-//        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
-//        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);
-//
-//    return t.checkExpect(this.n5.onTick(),
-//        new NBullets(5, 0, new MtLoBullet(), new ConsLoShip(new Ship(new Posn(0, 111), 4),
-//            new ConsLoShip(new Ship(new Posn(0, 111), 4), new MtLoShip())), 1));
-//  }
+  boolean testOnTick(Tester t) {
+    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
+        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
+        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
+        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks,
+        this.n5.random);
+
+    return t.checkExpect(this.n5.onTick(),
+        new NBullets(5, 0, new MtLoBullet(),
+            new ConsLoShip(new Ship(new Posn(0, 111), 4),
+                new ConsLoShip(new Ship(new Posn(0, 111), 4), new MtLoShip())),
+            1, new Random((long) 1)));
+  }
 
   boolean testShipHit(Tester t) {
     return t.checkExpect(this.s1.shipHit(new Bullet(new Posn(0, 0))), true)
@@ -863,10 +863,11 @@ class ExamplesNBullets {
         && t.checkExpect(this.someShips.countHits(10, this.someBulls), 11);
   }
 
-//  boolean testSpawnShips(Tester t) {
-//    return t.checkExpect(emptyShips.spawnShips(2), new ConsLoShip(new Ship(new Posn(500, 200), -4),
-//        new ConsLoShip(new Ship(new Posn(500, 200), -4), new MtLoShip())));
-//  }
+  boolean testSpawnShips(Tester t) {
+    return t.checkExpect(emptyShips.spawnShips(2, this.n5.random),
+        new ConsLoShip(new Ship(new Posn(500, 200), -4),
+            new ConsLoShip(new Ship(new Posn(500, 200), -4), new MtLoShip())));
+  }
 
   boolean testMoveShips(Tester t) {
     return t.checkExpect(this.emptyShips.moveShips(), this.emptyShips)
@@ -884,38 +885,37 @@ class ExamplesNBullets {
         && t.checkExpect(this.someShips1.bulletHit(this.b1), false)
         && t.checkExpect(this.moreShips.bulletHit(this.b7), true);
   }
-  
+
   boolean testMoveBullets(Tester t) {
     return t.checkExpect(this.emptyBulls.moveBullets(), this.emptyBulls)
-        && t.checkExpect(this.someBulls.moveBullets(), new ConsLoBullet(((ConsLoBullet)
-            this.someBulls).first.moveBullet(),((ConsLoBullet)
-                this.someBulls).rest.moveBullets()));
+        && t.checkExpect(this.someBulls.moveBullets(),
+            new ConsLoBullet(((ConsLoBullet) this.someBulls).first.moveBullet(),
+                ((ConsLoBullet) this.someBulls).rest.moveBullets()));
   }
-  
+
   boolean testShipRemove(Tester t) {
     return t.checkExpect(this.emptyBulls.shipRemove(this.s1), false)
         && t.checkExpect(this.someBulls.shipRemove(this.s1), true)
         && t.checkExpect(this.someBulls.shipRemove(this.s4), false);
   }
-  
+
   boolean testRemoveOffScreen(Tester t) {
     return t.checkExpect(this.emptyBulls.removeOffScreen(), this.emptyBulls)
         && t.checkExpect(this.moreBulls.removeOffScreen(), this.moreBulls1);
   }
-  
+
   boolean testDrawBullets(Tester t) {
     WorldScene ws = new WorldScene(500, 300);
     return t.checkExpect(this.emptyBulls.drawBullets(ws), ws)
-        && t.checkExpect(this.someBulls.drawBullets(ws), 
-            ((ConsLoBullet)this.someBulls).rest.drawBullets(((ConsLoBullet)
-                this.someBulls).first.drawOneBullet(ws)));
+        && t.checkExpect(this.someBulls.drawBullets(ws), ((ConsLoBullet) this.someBulls).rest
+            .drawBullets(((ConsLoBullet) this.someBulls).first.drawOneBullet(ws)));
   }
 
-//  boolean testBigBang(Tester t) {
-//    NBullets w = new NBullets(10);
-//    int worldWidth = 500;
-//    int worldHeight = 300;
-//    double tickRate = 1.0 / 28.0;
-//    return w.bigBang(worldWidth, worldHeight, tickRate);
-//  }
+  boolean testBigBang(Tester t) {
+    NBullets w = new NBullets(10);
+    int worldWidth = 500;
+    int worldHeight = 300;
+    double tickRate = 1.0 / 28.0;
+    return w.bigBang(worldWidth, worldHeight, tickRate);
+  }
 }
