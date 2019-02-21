@@ -914,35 +914,33 @@ class ExamplesNBullets {
         && t.checkExpect(this.someBulls.drawBullets(ws), ((ConsLoBullet) this.someBulls).rest
             .drawBullets(((ConsLoBullet) this.someBulls).first.drawOneBullet(ws)));
   }
-  
+
   boolean testNoneLeft(Tester t) {
     return t.checkExpect(this.emptyBulls.noneLeft(), true)
         && t.checkExpect(this.someBulls.noneLeft(), false)
         && t.checkExpect(this.moreBulls.noneLeft(), false);
   }
-  
+
   boolean testAppendTo(Tester t) {
     return t.checkExpect(this.emptyBulls.appendTo(this.emptyBulls), this.emptyBulls)
         && t.checkExpect(this.emptyBulls.appendTo(this.someBulls), this.someBulls)
         && t.checkExpect(this.someBulls.appendTo(this.emptyBulls), this.someBullsR)
-        && t.checkExpect(this.someBulls.appendTo(this.moreBulls), new ConsLoBullet(this.b7,
-            new ConsLoBullet(this.b4, new ConsLoBullet(this.b3,new ConsLoBullet(this.b2,
-                new ConsLoBullet(this.b1, this.moreBulls))))));
+        && t.checkExpect(this.someBulls.appendTo(this.moreBulls),
+            new ConsLoBullet(this.b7, new ConsLoBullet(this.b4, new ConsLoBullet(this.b3,
+                new ConsLoBullet(this.b2, new ConsLoBullet(this.b1, this.moreBulls))))));
   }
-  
+
   boolean testRemoveBulletIfHit(Tester t) {
     return t.checkExpect(this.emptyBulls.removeBulletIfHit(this.emptyShips), this.emptyBulls)
         && t.checkExpect(this.emptyBulls.removeBulletIfHit(this.someShips), this.emptyBulls)
         && t.checkExpect(this.someBulls.removeBulletIfHit(this.emptyShips), this.someBulls);
   }
-  
-  
 
-//  boolean testBigBang(Tester t) {
-//    NBullets w = new NBullets(10);
-//    int worldWidth = 500;
-//    int worldHeight = 300;
-//    double tickRate = 1.0 / 28.0;
-//    return w.bigBang(worldWidth, worldHeight, tickRate);
-//  }
+  boolean testBigBang(Tester t) {
+    NBullets w = new NBullets(10);
+    int worldWidth = 500;
+    int worldHeight = 300;
+    double tickRate = 1.0 / 28.0;
+    return w.bigBang(worldWidth, worldHeight, tickRate);
+  }
 }
