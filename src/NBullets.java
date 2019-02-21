@@ -57,7 +57,6 @@ class NBullets extends World {
       int numTicks) {
     if (bulletsLeft < 0) {
       throw new IllegalArgumentException("Not a valid number of bullets");
-      // TODO: TEST CONSTRUCTOR EXCEPTION
     }
     else {
       this.bulletsLeft = bulletsLeft;
@@ -80,7 +79,7 @@ class NBullets extends World {
     WorldScene bullets = this.loBullets
         .drawBullets(new WorldScene(NBullets.WIDTH, NBullets.HEIGHT));
     WorldScene ships = this.loShips.drawShips(bullets);
-    return ships.placeImageXY(writeText(), NBullets.TEXTPOS.x, NBullets.TEXTPOS.y);
+    return ships.placeImageXY(this.writeText(), NBullets.TEXTPOS.x, NBullets.TEXTPOS.y);
   }
 
   // Displays the bullets the player has left and the score.
@@ -107,7 +106,7 @@ class NBullets extends World {
   // Ends the world program when the bullets left is 0 and there are
   // no bullets on the screen (ie. ILoBullet is empty)
   public WorldEnd worldEnds() {
-    if (this.bulletsLeft == 0 && this.loBullets.noneLeft()) { // Game is ending prematurely
+    if (this.bulletsLeft == 0 && this.loBullets.noneLeft()) {
       return new WorldEnd(true, this.makeScene());
     }
     else {
@@ -122,8 +121,8 @@ class NBullets extends World {
   public World onTick() {
     NBullets temp = new NBullets(this.bulletsLeft,
         this.loShips.countHits(this.shipsDestroyed, this.loBullets),
-        loBullets.removeOffScreen().removeBulletIfHit(loShips).moveBullets(),
-        loShips.removeOffscreen().removeShip(loBullets).moveShips(), this.numTicks);
+        this.loBullets.removeOffScreen().removeBulletIfHit(this.loShips).moveBullets(),
+        this.loShips.removeOffscreen().removeShip(this.loBullets).moveShips(), this.numTicks);
 
     if (numTicks % NBullets.SSPAWNRATE == 0) {
       numTicks++;
@@ -171,6 +170,10 @@ class Ship {
   Ship(Posn coords, double velocity) {
     this.coords = coords;
     this.velocity = velocity;
+  }
+  // convenience constructor just for tests:
+  Ship(Posn coords) {
+    this(coords, 4);
   }
 
   // Determines if a ship has been hit by a given bullet.
@@ -232,6 +235,12 @@ class Bullet {
     this.velocity = velocity;
     this.numExplosions = numExplosions;
   }
+  
+  // convenience constructor just for tests:
+  
+  Bullet(Posn coords) {
+    this(2, coords, new Posn(8, 8), 0);
+  }
 
   // Determines if a bullet is off screen
   boolean isOffScreen() {
@@ -286,7 +295,7 @@ class Bullet {
 
 // A list of ships
 interface ILoShip {
-  // TODO YOU DON'T NEED A TEMPLATE FOR AN INTERFACE RIGHT?
+  // TODO YOU DON'T NEED A TEMPLATE FOR AN INTERFACE RIGHT? yea don't think so
 
   // Removes a ship if it is hit
   ILoShip removeShip(ILoBullet that);
@@ -631,19 +640,142 @@ class ConsLoBullet implements ILoBullet {
 }
 
 class ExamplesNBullets {
-  ILoBullet emptyBulls = new MtLoBullet();
-  ILoShip emptyShips = new MtLoShip();
-  WorldScene ws = new WorldScene(500, 300);
-
   Bullet b1 = new Bullet(2, new Posn(50, 50), new Posn(0, 8), 0);
   Bullet b2 = new Bullet(2, new Posn(50, 42), new Posn(0, 8), 0);
   Bullet b3 = new Bullet(2, new Posn(100, 100), new Posn(-10, 10), 5);
   Bullet b4 = new Bullet(2, new Posn(110, 90), new Posn(-10, 10), 5);
   Bullet b5 = new Bullet(2, new Posn(1100, 90), new Posn(-10, 10), 5);
   Bullet b6 = new Bullet(12, new Posn(1100, 90), new Posn(-10, 10), 5);
+  Bullet b7 = new Bullet(12, new Posn(0, 0), new Posn(-10, 10), 5);
+  
+  Ship s1 = new Ship(new Posn(0, 0), 3.0);
+  Ship s2 = new Ship(new Posn(30, 120), 0.0);
+  Ship s3 = new Ship(new Posn(34, 263), 12.0);
+  Ship s4 = new Ship(new Posn(4, 74), 8.0);
+  Ship s5 = new Ship(new Posn(500, 600), 10.0);
+  
+  ILoBullet emptyBulls = new MtLoBullet();
+  ILoBullet someBulls = new ConsLoBullet(this.b1, new ConsLoBullet(this.b2, 
+      new ConsLoBullet(this.b3, new ConsLoBullet(this.b4, new ConsLoBullet(this.b7,
+          new MtLoBullet())))));
+  
+  ILoShip emptyShips = new MtLoShip();
+  ILoShip someShips = new ConsLoShip(this.s1, new ConsLoShip(this.s2, 
+      new ConsLoShip(this.s3, new ConsLoShip(this.s4, new MtLoShip()))));
+  ILoShip someShips1 = new ConsLoShip(this.s2, 
+      new ConsLoShip(this.s3, new ConsLoShip(this.s4, new MtLoShip())));
+  ILoShip moreShips = new ConsLoShip(this.s1, new ConsLoShip(this.s2, 
+      new ConsLoShip(this.s3, new ConsLoShip(this.s4, new ConsLoShip(this.s5, 
+          new MtLoShip())))));
+  ILoShip moreShips1 = new ConsLoShip(this.s1, new ConsLoShip(this.s2, 
+      new ConsLoShip(this.s3, new ConsLoShip(this.s4, new MtLoShip()))));
+  
+  WorldScene ws = new WorldScene(500, 300);
+  
+  NBullets n5 = new NBullets(5);
+  NBullets test2 = new NBullets(10, 5, this.someBulls, this.someShips, 30);
 
-  // Tests on Bullet class
-
+  // Tests for NBullets
+  boolean testConstructorException(Tester t) {
+    return t.checkConstructorException(
+        new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -1, 10,
+        emptyBulls, emptyShips, 10)
+        && t.checkConstructorException(
+            new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -10,
+            230, emptyBulls, emptyShips, 430);
+  }
+  
+  boolean testMakeScene(Tester t) {
+    WorldScene bulletsN5 = this.n5.loBullets
+        .drawBullets(new WorldScene(NBullets.WIDTH, NBullets.HEIGHT));
+    WorldScene shipsN5 = this.n5.loShips.drawShips(bulletsN5);
+    
+    WorldScene bulletsTest2 = this.test2.loBullets
+        .drawBullets(new WorldScene(NBullets.WIDTH, NBullets.HEIGHT));
+    WorldScene shipsTest2 = this.test2.loShips.drawShips(bulletsTest2);
+    
+    return t.checkExpect(this.n5.makeScene(), shipsN5.placeImageXY(this.n5.writeText(), 
+        NBullets.TEXTPOS.x, NBullets.TEXTPOS.y))
+        && t.checkExpect(this.test2.makeScene(), shipsTest2.placeImageXY(this.test2.writeText(),
+            NBullets.TEXTPOS.x, NBullets.TEXTPOS.y));
+  }
+  
+  boolean testWriteText(Tester t) {
+    return t.checkExpect(this.n5.writeText(), new TextImage(
+        ("Bullets left: " + this.n5.bulletsLeft + "; " + "Ships destroyed: " + this.n5.shipsDestroyed),
+        NBullets.TEXTSIZE, NBullets.TEXTCOLOR))
+        && t.checkExpect(this.test2.writeText(), new TextImage(
+        ("Bullets left: " + this.test2.bulletsLeft + "; " + "Ships destroyed: " + this.test2.shipsDestroyed),
+        NBullets.TEXTSIZE, NBullets.TEXTCOLOR));
+  }
+  
+  boolean testOnKey (Tester t) {
+    return t.checkExpect(this.n5.onKeyEvent(" "), new NBullets(this.n5.bulletsLeft - 1, this.n5.shipsDestroyed, new ConsLoBullet(
+        new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS, new Posn(0, NBullets.BSPEED), 1),
+        this.n5.loBullets), this.n5.loShips, this.n5.numTicks))
+        && t.checkExpect(this.n5.onKeyEvent("a"), this.n5)
+        && t.checkExpect(this.test2.onKeyEvent(" "), new NBullets(this.test2.bulletsLeft - 1, this.test2.shipsDestroyed, new ConsLoBullet(
+            new Bullet(NBullets.INITIALBSIZE, NBullets.INITIALBPOS, new Posn(0, NBullets.BSPEED), 1),
+            this.test2.loBullets), this.test2.loShips, this.test2.numTicks))
+        && t.checkExpect(this.test2.onKeyEvent("a"), this.test2);
+  }
+  
+  boolean testWorldEnds (Tester t) {
+    NBullets zeroLeft = new NBullets(0);
+    return t.checkExpect(this.n5.worldEnds(), new WorldEnd(false, this.n5.makeScene()))
+        && t.checkExpect(zeroLeft.worldEnds(), new WorldEnd(true, zeroLeft.makeScene()))
+        && t.checkExpect(this.test2.worldEnds(), new WorldEnd(false, this.test2.makeScene()));
+    }
+  
+//  boolean testOnTick(Tester t) {
+//    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
+//        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
+//        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
+//        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks);         not sure how to test randomness here.
+//    
+//    return t.checkOneOf(this.n5.onTick(), (new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed, n5Temp.loBullets,
+//        n5Temp.loShips.spawnShips(0), this.n5.numTicks)), (new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed, n5Temp.loBullets,
+//            n5Temp.loShips.spawnShips(1), this.n5.numTicks)), (new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed, n5Temp.loBullets,
+//                n5Temp.loShips.spawnShips(2), this.n5.numTicks)), (new NBullets(n5Temp.bulletsLeft, n5Temp.shipsDestroyed, n5Temp.loBullets,
+//                    n5Temp.loShips.spawnShips(3), this.n5.numTicks)));
+//  }
+  
+  boolean testShipHit (Tester t) {
+    return t.checkExpect(this.s1.shipHit(new Bullet(new Posn(0,0))), true)
+        && t.checkExpect(this.s1.shipHit(new Bullet(new Posn(100,100))), false);
+  }
+  
+  boolean testIsOffScreenShip (Tester t) {
+    return t.checkExpect(new Ship(new Posn(-10, 0)).isOffScreen(), true)
+        && t.checkExpect(this.s3.isOffScreen(), false);
+  }
+  
+  boolean testDrawOneShip (Tester t) {
+    return t.checkExpect(this.s1.drawOneShip(new WorldScene(500, 300)), 
+        new WorldScene(500,300).placeImageXY(new CircleImage(this.s1.radius, OutlineMode.SOLID, this.s1.color),
+        this.s1.coords.x, this.s1.coords.y))
+        && t.checkExpect(this.s2.drawOneShip(new WorldScene(500, 300)),
+            new WorldScene(500,300).placeImageXY(new CircleImage(this.s2.radius, OutlineMode.SOLID, this.s2.color),
+            this.s2.coords.x, this.s2.coords.y))
+        && t.checkExpect(this.s3.drawOneShip(new WorldScene(500, 300)),
+            new WorldScene(500,300).placeImageXY(new CircleImage(this.s3.radius, OutlineMode.SOLID, this.s3.color),
+            this.s3.coords.x, this.s3.coords.y));
+  }
+  
+  boolean testMoveShip (Tester t) {
+    return t.checkExpect(this.s1.moveShip(), new Ship(new Posn((int) 
+        (this.s1.coords.x + this.s1.velocity), this.s1.coords.y), this.s1.velocity))
+        && t.checkExpect(this.s2.moveShip(), new Ship(new Posn((int) 
+            (this.s2.coords.x + this.s2.velocity), this.s2.coords.y), this.s2.velocity))
+        && t.checkExpect(this.s3.moveShip(), new Ship(new Posn((int) 
+            (this.s3.coords.x + this.s3.velocity), this.s3.coords.y), this.s3.velocity));
+  }
+  
+  boolean testIsOffScreenBullet (Tester t) {
+    return t.checkExpect(this.b1.isOffScreen(), false)
+        && t.checkExpect(new Bullet(new Posn(10, 1000)).isOffScreen(), true);
+  }
+ 
   boolean testIsOffScreen(Tester t) {
     return t.checkExpect(b1.isOffScreen(), false) && t.checkExpect(b5.isOffScreen(), true);
   }
@@ -687,22 +819,58 @@ class ExamplesNBullets {
                 b6.explodeBulletHelper(4)));
 
   }
-
-  // Tests for NBullets
-  boolean testConstructorException(Tester t) {
-    return t.checkConstructorException(
-        new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -1, 10,
-        emptyBulls, emptyShips, 10)
-        && t.checkConstructorException(
-            new IllegalArgumentException("Not a valid number of " + "bullets"), "NBullets", -10,
-            230, emptyBulls, emptyShips, 430);
+  
+  boolean testRemoveShips(Tester t) {
+    return t.checkExpect(this.emptyShips.removeShip(this.emptyBulls), this.emptyShips)
+        && t.checkExpect(this.someShips.removeShip(this.emptyBulls), this.someShips)
+        && t.checkExpect(this.someShips.removeShip(this.someBulls), this.someShips1);
+  }
+  
+  boolean testRemoveOffScreenILoShips(Tester t) {
+    return t.checkExpect(this.emptyShips.removeOffscreen(), this.emptyShips)
+        && t.checkExpect(this.moreShips.removeOffscreen(), this.moreShips1);
+  }
+  
+  boolean testDrawShips(Tester t) {
+    WorldScene ws = new WorldScene(500, 300);
+    return t.checkExpect(this.emptyShips.drawShips(ws), ws)
+        && t.checkExpect(this.someShips.drawShips(ws), 
+            ((ConsLoShip)this.someShips).rest.drawShips(((ConsLoShip)
+                this.someShips).first.drawOneShip(ws)));
+  }
+  
+  boolean testCountHits(Tester t) {
+    return t.checkExpect(this.emptyShips.countHits(10, this.emptyBulls), 10)
+        && t.checkExpect(this.emptyShips.countHits(10, this.someBulls),10)
+        && t.checkExpect(this.someShips.countHits(10, this.emptyBulls), 10)
+        && t.checkExpect(this.someShips.countHits(10, this.someBulls), 11);
+  }
+  
+//  boolean testSpawnShips(Tester t) {
+//    return t.checkExpect(actual, expected);     not sure how to test randomness here.
+//  }
+  
+  boolean testMoveShips(Tester t) {
+    return t.checkExpect(this.emptyShips.moveShips(), this.emptyShips)
+        && t.checkExpect(this.someShips.moveShips(), new ConsLoShip(((ConsLoShip)
+            this.someShips).first.moveShip(), ((ConsLoShip)this.someShips).rest.moveShips()))
+        && t.checkExpect(this.someShips1.moveShips(), new ConsLoShip(((ConsLoShip)
+            this.someShips1).first.moveShip(), ((ConsLoShip)this.someShips1).rest.moveShips()));
   }
 
-  boolean testBigBang(Tester t) {
-    NBullets w = new NBullets(10);
-    int worldWidth = 500;
-    int worldHeight = 300;
-    double tickRate = 1.0 / 28.0;
-    return w.bigBang(worldWidth, worldHeight, tickRate);
+  boolean testBulletHit(Tester t) {
+    return t.checkExpect(this.emptyShips.bulletHit(this.b1), false)
+        && t.checkExpect(this.someShips.bulletHit(this.b1), false)
+        && t.checkExpect(this.someShips1.bulletHit(this.b1), false)
+        && t.checkExpect(this.moreShips.bulletHit(this.b7), true);
   }
+  
+  
+//  boolean testBigBang(Tester t) {
+//    NBullets w = new NBullets(10);
+//    int worldWidth = 500;
+//    int worldHeight = 300;
+//    double tickRate = 1.0 / 28.0;
+//    return w.bigBang(worldWidth, worldHeight, tickRate);
+//  }
 }
