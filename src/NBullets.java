@@ -738,18 +738,16 @@ class ExamplesNBullets {
         && t.checkExpect(this.test2.worldEnds(), new WorldEnd(false, this.test2.makeScene()));
   }
 
-  boolean testOnTick(Tester t) {
-    NBullets n5Temp = new NBullets(this.n5.bulletsLeft,
-        this.n5.loShips.countHits(this.n5.shipsDestroyed, this.n5.loBullets),
-        n5.loBullets.removeOffScreen().removeBulletIfHit(n5.loShips).moveBullets(),
-        n5.loShips.removeOffscreen().removeShip(n5.loBullets).moveShips(), this.n5.numTicks,
-        this.n5.random);
+  NBullets zeroTest = new NBullets(10, 0, emptyBulls, emptyShips, 1, new Random((long) 1));
+  NBullets tickTest = new NBullets(10, 0, emptyBulls, emptyShips, 28, new Random((long) 1));
+  Random rTick = new Random((long) 1);
+  int ph = rTick.nextInt();
 
-    return t.checkExpect(this.n5.onTick(),
-        new NBullets(5, 0, new MtLoBullet(),
-            new ConsLoShip(new Ship(new Posn(0, 111), 4),
-                new ConsLoShip(new Ship(new Posn(0, 111), 4), new MtLoShip())),
-            1, new Random((long) 1)));
+  boolean testOnTick(Tester t) {
+    return t.checkExpect(this.zeroTest.onTick(), new NBullets(10, 0, emptyBulls, emptyShips, 2, new Random((long) 1)))
+        && t.checkExpect(this.tickTest.onTick(),
+        new NBullets(tickTest.bulletsLeft, tickTest.shipsDestroyed, emptyBulls,
+            tickTest.loShips.spawnShips(2, rTick), 29, tickTest.random));
   }
 
   boolean testShipHit(Tester t) {
@@ -863,10 +861,11 @@ class ExamplesNBullets {
         && t.checkExpect(this.someShips.countHits(10, this.someBulls), 11);
   }
 
+  Random rSpawn = new Random((long) 1);
   boolean testSpawnShips(Tester t) {
+
     return t.checkExpect(emptyShips.spawnShips(2, this.n5.random),
-        new ConsLoShip(new Ship(new Posn(500, 200), -4),
-            new ConsLoShip(new Ship(new Posn(500, 200), -4), new MtLoShip())));
+        this.emptyShips.spawnShips(2, rSpawn));
   }
 
   boolean testMoveShips(Tester t) {
@@ -911,11 +910,11 @@ class ExamplesNBullets {
             .drawBullets(((ConsLoBullet) this.someBulls).first.drawOneBullet(ws)));
   }
 
-  boolean testBigBang(Tester t) {
-    NBullets w = new NBullets(10);
-    int worldWidth = 500;
-    int worldHeight = 300;
-    double tickRate = 1.0 / 28.0;
-    return w.bigBang(worldWidth, worldHeight, tickRate);
-  }
+//  boolean testBigBang(Tester t) {
+//    NBullets w = new NBullets(10);
+//    int worldWidth = 500;
+//    int worldHeight = 300;
+//    double tickRate = 1.0 / 28.0;
+//    return w.bigBang(worldWidth, worldHeight, tickRate);
+//  }
 }
